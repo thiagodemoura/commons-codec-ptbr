@@ -1,0 +1,108 @@
+# Builds every pull request; on every push to main, builds, deploys a version to GitHub Packages and creates a
+# GitHub Release.
+#
+# The version is the vX.Y.Z tag on the pushed commit, if there is one (push the tag before main to choose the
+# version, e.g. a minor or major bump); otherwise the patch number of the latest vX.Y.Z tag plus one, and the
+# workflow tags the commit itself.
+name: Build and release
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - run: mvn -B verify
+
+  release:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # push the tag, create the release
+      packages: write   # deploy to GitHub Packages
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+          server-id: github
+          server-username: GITHUB_ACTOR
+          server-password: GITHUB_TOKEN
+
+      - name: Pick the version
+        id: version
+        run: |
+          tag=$(git tag --points-at HEAD --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n 1)
+          if [ -n "$tag" ]; then
+            version="${tag#v}"
+            new_tag=false
+          else
+            last=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n 1)
+            if [ -z "$last" ]; then
+              version=$(mvn -B -q help:evaluate -Dexpression=project.version -DforceStdout | sed 's/-SNAPSHOT$//')
+            else
+              IFS=. read -r major minor patch <<< "${last#v}"
+              version="${major}.${minor}.$((patch + 1))"
+            fi
+            new_tag=true
+          fi
+          if gh release view "v${version}" > /dev/null 2>&1; then
+            echo "v${version} is already released"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "new_tag=${new_tag}" >> "$GITHUB_OUTPUT"
+          echo "Releasing ${version}"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Set the version
+        if: steps.version.outputs.skip != 'true'
+        run: >
+          mvn -B -q org.codehaus.mojo:versions-maven-plugin:2.18.0:set
+          -DnewVersion=${{ steps.version.outputs.version }} -DgenerateBackupPoms=false
+
+      - name: Build, test and deploy to GitHub Packages
+        if: steps.version.outputs.skip != 'true'
+        run: mvn -B deploy
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Tag
+        if: steps.version.outputs.skip != 'true' && steps.version.outputs.new_tag == 'true'
+        run: |
+          git tag "v${{ steps.version.outputs.version }}"
+          git push origin "v${{ steps.version.outputs.version }}"
+
+      - name: Create the GitHub Release
+        if: steps.version.outputs.skip != 'true'
+        run: >
+          gh release create "v${{ steps.version.outputs.version }}"
+          target/commons-codec-ptbr-${{ steps.version.outputs.version }}*.jar
+          --title "v${{ steps.version.outputs.version }}" --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}

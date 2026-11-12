@@ -14,17 +14,50 @@ the coda archiphonemes, final vowel raising, the "r" forte, lh/nh. This library 
 
 Requires Java 25 and commons-codec 1.21.0.
 
-```
-mvn install
-```
+### Getting it
+
+Releases are published to GitHub Packages. Each release also has a
+[GitHub Release](https://github.com/thiagodemoura/commons-codec-ptbr/releases) with the jars attached.
 
 ```xml
+<repositories>
+    <repository>
+        <id>github-commons-codec-ptbr</id>
+        <url>https://maven.pkg.github.com/thiagodemoura/commons-codec-ptbr</url>
+    </repository>
+</repositories>
+
 <dependency>
     <groupId>br.codec</groupId>
     <artifactId>commons-codec-ptbr</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>1.0.0</version>
 </dependency>
 ```
+
+GitHub Packages requires a login even for public packages. Add a `<server>` with the same id to
+`~/.m2/settings.xml`. Use your GitHub user name and a token with the `read:packages` scope:
+
+```xml
+<server>
+    <id>github-commons-codec-ptbr</id>
+    <username>YOUR_GITHUB_USER</username>
+    <password>YOUR_TOKEN</password>
+</server>
+```
+
+To build it yourself instead: `mvn install`.
+
+### Releases
+
+[.github/workflows/release.yml](.github/workflows/release.yml) builds every pull request. On every push to `main`
+it builds, deploys a version to GitHub Packages and creates a GitHub Release:
+
+- if the pushed commit has a `vX.Y.Z` tag, that is the version. Push the tag before `main` to choose a minor or
+  major bump.
+- otherwise the version is the latest tag with its patch number plus one (1.0.0 → 1.0.1), and the workflow tags
+  the commit.
+
+The `<version>` in `pom.xml` is only used for local builds. The workflow sets the released version.
 
 ## Usage
 
