@@ -12,7 +12,7 @@ the coda archiphonemes, final vowel raising, the "r" forte, lh/nh. This library 
 | `BrazilianPortugueseSoundex` | `StringEncoder`: letter + 3 digits over PB phonemes. `Gonçalves` → `G654` |
 | `Dialect` | Presets for carioca, paulistano, florianopolitano, belo-horizontino, porto-alegrense, caipira, nordestino |
 
-Requires Java 21 and commons-codec 1.21.0.
+Requires Java 25 and commons-codec 1.21.0.
 
 ```
 mvn install
