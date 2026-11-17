@@ -69,6 +69,12 @@ key.encode("Thiago");            // TIAGU    (= Tiago)
 key.encode("Maria da Silva");    // MARIA SIUVA   (particles dropped)
 key.encode("caro");              // KARU  ≠  carro KAHU
 
+var pb = new BrazilianPortuguesePhonetic();
+pb.encode("Gonçalves");          // GONSAUVIS (= Gonsalves)
+pb.alternate("Gonçalves");       // GONKAUVIS (= Goncalves: ç as K, w as V, the spellings of records)
+pb.isEncodeEqual("Gonçalves", "Goncalves");   // true: they share a key
+pb.isEncodeEqual("Wagner", "Vagner");         // true
+
 var folding = BrazilianPortuguesePhonetic.builder().foldUnstressedVowels().build();
 folding.encode("Felipe");        // FILIPI   (= Filipe)
 

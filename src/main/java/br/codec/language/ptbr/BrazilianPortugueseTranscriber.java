@@ -188,8 +188,8 @@ public final class BrazilianPortugueseTranscriber {
                 case 'j' -> add(out, Phoneme.ZH);
                 case 'm' -> add(out, Phoneme.M);
                 case 'z' -> add(out, Phoneme.Z);
-                case 'ç' -> add(out, Phoneme.S);
-                case 'w' -> add(out, Phoneme.W_GLIDE); // Wellington, Wilson: [w]
+                case 'ç' -> add(out, Phoneme.S).letter = 'ç';
+                case 'w' -> add(out, Phoneme.W_GLIDE).letter = 'w'; // Wellington, Wilson: [w]
                 case 'h' -> { /* silent: hoje, Hugo, Thiago; the digraphs are read with the letter before */ }
                 case 'p' -> {
                     if (n1 == 'h') { // Raphael, Philippe

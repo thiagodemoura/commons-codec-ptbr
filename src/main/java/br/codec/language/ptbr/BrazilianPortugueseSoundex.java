@@ -7,7 +7,7 @@ import org.apache.commons.codec.EncoderException;
 import org.apache.commons.codec.StringEncoder;
 
 /**
- * A Soundex-style code for Brazilian Portuguese: a letter and three digits ({@code "Gonçalves"} → {@code G524}).
+ * A Soundex-style code for Brazilian Portuguese: a letter and three digits ({@code "Gonçalves"} → {@code G654}).
  *
  * <p>Where the classic {@code org.apache.commons.codec.language.Soundex} groups English <i>letters</i>, this code
  * groups PB <i>phonemes</i> (from {@link BrazilianPortuguesePhonetic}), so digraphs, silent letters, c/g before e
@@ -28,6 +28,9 @@ import org.apache.commons.codec.StringEncoder;
  *
  * Vowels (and coda l, vocalized) are not coded but separate equal digits, as in Soundex. The first character is the
  * first letter of the key. Each word is coded; codes are joined by a space.
+ *
+ * <p>The {@link #alternate alternate} code is the code of the phonetic encoder's alternate key (ç as K, w as V):
+ * "Gonçalves" is {@code G654} / {@code G634}, "Wagner" {@code U367} / {@code V367}.
  */
 public class BrazilianPortugueseSoundex implements StringEncoder {
 
@@ -46,11 +49,32 @@ public class BrazilianPortugueseSoundex implements StringEncoder {
 
     @Override
     public String encode(String text) {
+        return encode(text, false);
+    }
+
+    /** The code of the alternate key (ç as K, w as V); the primary code when the text has no ç or w. */
+    public String alternate(String text) {
+        return encode(text, true);
+    }
+
+    /** Whether the two texts share a code (primary or alternate). */
+    public boolean isEncodeEqual(String a, String b) {
+        String pa = encode(a);
+        String pb = encode(b);
+        if (pa == null || pb == null) {
+            return false;
+        }
+        String aa = alternate(a);
+        String ab = alternate(b);
+        return pa.equals(pb) || pa.equals(ab) || aa.equals(pb) || aa.equals(ab);
+    }
+
+    private String encode(String text, boolean alternate) {
         if (text == null) {
             return null;
         }
         List<String> codes = new ArrayList<>();
-        for (List<String> tokens : phonetic.keys(text)) {
+        for (List<String> tokens : phonetic.keys(text, alternate)) {
             if (!tokens.isEmpty()) {
                 codes.add(code(tokens));
             }

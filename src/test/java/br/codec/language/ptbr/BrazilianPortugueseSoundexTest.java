@@ -1,9 +1,11 @@
 package br.codec.language.ptbr;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.commons.codec.EncoderException;
 import org.junit.jupiter.api.Test;
@@ -39,6 +41,18 @@ class BrazilianPortugueseSoundexTest {
         assertEquals(soundex.encode("Bato").substring(1), soundex.encode("Pato").substring(1));
         assertEquals(soundex.encode("caro"), soundex.encode("carro"));
         assertNotEquals(soundex.encode("cata"), soundex.encode("canta"));
+    }
+
+    @Test
+    void alternateCodes() {
+        assertEquals("G634", soundex.alternate("Gonçalves"));
+        assertEquals("V367", soundex.alternate("Wagner"));
+        assertEquals("U367", soundex.encode("Wagner"));
+        assertEquals("S500", soundex.alternate("Souza"));
+        assertTrue(soundex.isEncodeEqual("Gonçalves", "Gonsalves"));
+        assertTrue(soundex.isEncodeEqual("Gonçalves", "Goncalves"));
+        assertTrue(soundex.isEncodeEqual("Wagner", "Vagner"));
+        assertFalse(soundex.isEncodeEqual("Gonsalves", "Goncalves"));
     }
 
     @Test

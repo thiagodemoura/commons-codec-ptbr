@@ -16,6 +16,8 @@ final class Segment {
     boolean stressed;
     /** Inserted by the transcriber, not written (prothetic e of "Stefany"). */
     boolean inserted;
+    /** The letter the segment was read from, when the matching key needs it ('ç', 'w'); 0 otherwise. */
+    char letter;
 
     Segment(Phoneme phoneme) {
         this.phoneme = phoneme;
@@ -30,6 +32,7 @@ final class Segment {
         s.coda = coda;
         s.stressed = stressed;
         s.inserted = inserted;
+        s.letter = letter;
         return s;
     }
 
