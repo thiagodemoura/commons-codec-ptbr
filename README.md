@@ -147,3 +147,44 @@ Builder options: `maxWordLength(n)`, `foldUnstressedVowels()`, `keepDiphthongs()
 - **Not modeled:** stressed-vowel diphthongization (*três* [ˈtɾejs]) and vowel deletion across word boundaries.
 - **Dropping silent ct/pt also drops** the pronounced c of common words (*pacto*). Use `keepEtymologicalSpelling()`
   for general vocabulary.
+
+## Migrating
+
+Keys are not stable across versions: re-encode the keys you store when you upgrade. Encoding is cheap, so recompute
+all of them rather than guessing which changed.
+
+| | 1.0.0 → 1.0.1 | 1.0.1 → 1.0.2 |
+|---|---|---|
+| `encode()` | unchanged | changed for cq (*Jacqueline*) and initial igna/igne (*Ignez*, *Ignácio*) |
+| `encode()` with `foldUnstressedVowels()` | unchanged | changed for almost every word: stressed e/o fold too |
+| `alternate()` | new: ç as K, w as V | also final -ez as -es (*Rodriguez*) |
+| `isEncodeEqual()` | true when any key is shared (more pairs match) | unchanged |
+| Soundex `encode()` | unchanged; `alternate()` and `isEncodeEqual()` new | changed for cq and initial igna/igne |
+| Transcriptions | unchanged | changed for cq and initial igna/igne |
+
+The igna/igne rule does not apply with `keepEtymologicalSpelling()`.
+
+1. **Bump the dependency** to the new `<version>`.
+2. **Re-encode stored keys** with the same builder options as before:
+   ```java
+   var pb = new BrazilianPortuguesePhonetic();
+   for (Person p : repository.findAll()) {
+       p.setNameKey(pb.encode(p.getName()));
+       p.setNameAltKey(pb.alternate(p.getName()));
+   }
+   ```
+3. **Store and search the alternate key** to match the spellings of records (*Goncalves*, *Vagner*, *Rodriguez*).
+   Searching both columns for both keys is what `isEncodeEqual` does:
+   ```sql
+   ALTER TABLE person ADD name_alt_key VARCHAR(100);
+   CREATE INDEX person_name_alt_key ON person (name_alt_key);
+
+   SELECT * FROM person
+   WHERE name_key IN (:key, :altKey) OR name_alt_key IN (:key, :altKey);
+   ```
+   Most names have no ç, w or final -ez; their alternate equals their key, and you may store `NULL` instead.
+4. **Review code that relies on `isEncodeEqual`** (automatic merging of duplicates, for instance): since 1.0.1 it
+   also matches through the alternate key (*Gonçalves* = *Goncalves*, *Wagner* = *Vagner*).
+5. **Reconsider `foldUnstressedVowels()`.** Since 1.0.2 it also merges names that differ only in e/i or o/u
+   (*Nelson* = *Nilson*, *Rosa* = *Rusa*). If that is too loose, use the default with the alternate key.
+6. **Soundex** follows the same steps. `difference()` still compares the primary codes only.
