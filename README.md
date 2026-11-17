@@ -71,7 +71,7 @@ key.encode("caro");              // KARU  ≠  carro KAHU
 
 var pb = new BrazilianPortuguesePhonetic();
 pb.encode("Gonçalves");          // GONSAUVIS (= Gonsalves)
-pb.alternate("Gonçalves");       // GONKAUVIS (= Goncalves: ç as K, w as V, the spellings of records)
+pb.alternate("Gonçalves");       // GONKAUVIS (= Goncalves: ç as K, w as V, final -ez as -es)
 pb.isEncodeEqual("Gonçalves", "Goncalves");   // true: they share a key
 pb.isEncodeEqual("Wagner", "Vagner");         // true
 
@@ -123,8 +123,10 @@ The key keeps only what tells words apart in PB and drops the rest:
 - **Merged.** The archiphonemes /S/, /R/, /N/, /E/, /O/. Final unstressed e/o, written I/U. Coda l (U). Glides (I/U).
   By default also ou → O and ei/ai before r, x, j → E/A (*Moura* = *Mora*, *Ribeiro* = *Ribero*).
 - **Dropped.** Allophones: palatalization, nasalization before a nasal consonant, how each dialect realizes r, s and l.
-- **Simplified etymological spellings.** ph, th, y, double consonants, silent ct/pt (*Victor* = *Vitor*, *Baptista* =
-  *Batista*, *Assumpção* = *Assunção*).
+- **Simplified etymological spellings.** ph, th, y, double consonants, cq, silent ct/pt, initial igna/igne (*Victor* =
+  *Vitor*, *Baptista* = *Batista*, *Assumpção* = *Assunção*, *Jacqueline* = *Jaqueline*, *Ignez* = *Inês*).
+- **Alternate key** for the spellings of records: ç as K (*Goncalves*), w as V (*Vagner*), final -ez as -es
+  (*Rodriguez* = *Rodrigues*). Texts match when they share a key.
 
 Tokens: `A E I O U`, `P B T D K G F V S Z M N L`, `X` = ʃ, `J` = ʒ, `Y` = ɲ (nh), `LH` = ʎ, `R` = ɾ or /R/,
 `H` = "r" forte. A nasal vowel is its vowel followed by `N`, placed after its glide if it has one: *canta* `KANTA`,
@@ -136,8 +138,9 @@ Builder options: `maxWordLength(n)`, `foldUnstressedVowels()`, `keepDiphthongs()
 
 ## Known limits
 
-- **Stress comes from the spelling alone.** Unaccented words follow the accentuation rules. Spanish-style surnames in
-  -ez (*Gonsalvez*, *Rodriguez*) are therefore read as oxytones, like *talvez*, and do not match *Gonçalves*.
+- **Stress comes from the spelling alone.** Unaccented words follow the accentuation rules, so names whose accent
+  was lost are stressed elsewhere (*Sergio*, *Keli*). The primary key reads Spanish-style surnames in -ez as oxytones,
+  like *talvez*; only the alternate key reads them as -es. `foldUnstressedVowels()` ignores stress for this reason.
 - **The open and closed mid vowels are lost** in words without an accent (/E/, /O/). The spelling does not record them.
 - **Intervocalic x defaults to /ʃ/.** /ks/ and /s/ are recognized only for a short list of stems (*fixo*, *táxi*,
   *sexo*, *próximo*, *máximo*, ...).
