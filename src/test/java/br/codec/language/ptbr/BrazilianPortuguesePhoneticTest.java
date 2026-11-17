@@ -77,6 +77,44 @@ class BrazilianPortuguesePhoneticTest {
         assertFalse(encoder.isEncodeEqual(a, b));
     }
 
+    @ParameterizedTest(name = "{0}: {1} / {2}")
+    @CsvSource({
+            "Gonçalves,  GONSAUVIS,  GONKAUVIS",
+            "Assunção,   ASUNSAUN,   ASUNKAUN",
+            "Wilson,     UIUSON,     VIUSON",
+            "Wagner,     UAGINER,    VAGINER",
+            "Souza,      SOZA,       SOZA",
+    })
+    void alternateKeyReadsCedillaAsKAndWAsV(String text, String primary, String alternate) {
+        assertEquals(primary, encoder.encode(text));
+        assertEquals(alternate, encoder.alternate(text));
+    }
+
+    @ParameterizedTest(name = "{0} = {1}")
+    @CsvSource({
+            "Gonçalves, Gonsalves",
+            "Gonçalves, Goncalves",
+            "Assunção,  Assuncão",
+            "Wilson,    Uilson",
+            "Wilson,    Vilson",
+            "Wagner,    Vagner",
+            "Vagner,    Wagner",
+    })
+    void sharedKeysMatch(String a, String b) {
+        assertTrue(encoder.isEncodeEqual(a, b));
+    }
+
+    @ParameterizedTest(name = "{0} ≠ {1}")
+    @CsvSource({
+            "Gonsalves, Goncalves", // neither spelling says they are the same name
+            "Uilson,    Vilson",
+            "casa,      caça",
+            "Carlos,    Sarlos",
+    })
+    void unsharedKeysDoNotMatch(String a, String b) {
+        assertFalse(encoder.isEncodeEqual(a, b));
+    }
+
     @Test
     void foldingUnstressedVowelsMergesPretonicRaising() {
         assertNotEquals(encoder.encode("Felipe"), encoder.encode("Filipe"));
@@ -108,6 +146,8 @@ class BrazilianPortuguesePhoneticTest {
     void commonsCodecContract() throws EncoderException {
         assertNull(encoder.encode((String) null));
         assertNull(encoder.encode((Object) null));
+        assertNull(encoder.alternate(null));
+        assertFalse(encoder.isEncodeEqual(null, "Ana"));
         assertEquals("", encoder.encode(""));
         assertEquals("", encoder.encode("  123 - "));
         assertEquals("LUIS", encoder.encode((Object) "Luiz"));

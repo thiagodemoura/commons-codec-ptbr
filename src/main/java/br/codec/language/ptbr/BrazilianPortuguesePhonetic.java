@@ -36,6 +36,13 @@ import org.apache.commons.codec.StringEncoder;
  * collapsed (Isaac = Isac). Each word gets its key; keys are joined by a space. Prepositions and the conjunction
  * "e" of names (de, da, do, das, dos, e) are dropped unless {@link Builder#keepParticles()} is set.
  *
+ * <p>Like {@code DoubleMetaphone}, a text has a primary key ({@link #encode(String)}) and an {@link #alternate
+ * alternate} one, for the spellings of records: in the alternate, ç is K, like c before a, o, u (the cedilla is
+ * often lost: Goncalves), and w is V (Wagner = Vagner). Two texts match ({@link #isEncodeEqual}) when they share a
+ * key, so "Gonçalves" ({@code GONSAUVIS} / {@code GONKAUVIS}) matches both "Gonsalves" and "Goncalves", and
+ * "Wilson" ({@code UIUSON} / {@code VIUSON}) both "Uilson" and "Vilson", while "Gonsalves" and "Goncalves" do not
+ * match each other. A text with no ç or w has one key: its alternate is its primary.
+ *
  * <p>Instances are immutable and thread-safe.
  */
 public class BrazilianPortuguesePhonetic implements StringEncoder {
@@ -72,10 +79,23 @@ public class BrazilianPortuguesePhonetic implements StringEncoder {
      */
     @Override
     public String encode(String text) {
+        return encode(text, false);
+    }
+
+    /**
+     * The alternate key: as {@link #encode(String)}, with ç read as K and w as V.
+     *
+     * @return the key, {@code null} for {@code null}; the primary key when the text has no ç or w
+     */
+    public String alternate(String text) {
+        return encode(text, true);
+    }
+
+    private String encode(String text, boolean alternate) {
         if (text == null) {
             return null;
         }
-        List<List<String>> keys = keys(text);
+        List<List<String>> keys = keys(text, alternate);
         List<String> words = new ArrayList<>(keys.size());
         for (List<String> tokens : keys) {
             String key = String.join("", tokens);
@@ -97,14 +117,22 @@ public class BrazilianPortuguesePhonetic implements StringEncoder {
         return encode(s);
     }
 
-    /** Whether the two texts have the same key. */
+    /** Whether the two texts share a key (primary or alternate). */
     public boolean isEncodeEqual(String a, String b) {
-        String ka = encode(a);
-        return ka != null && ka.equals(encode(b));
+        String pa = encode(a);
+        String pb = encode(b);
+        if (pa == null || pb == null) {
+            return false;
+        }
+        String aa = alternate(a);
+        String ab = alternate(b);
+        return pa.equals(pb) || pa.equals(ab) || aa.equals(pb) || aa.equals(ab);
     }
 
-    /** The key tokens of each word (package use: {@link BrazilianPortugueseSoundex}). */
-    List<List<String>> keys(String text) {
+    /**
+     * The key tokens of each word, primary or alternate (package use: {@link BrazilianPortugueseSoundex}).
+     */
+    List<List<String>> keys(String text, boolean alternate) {
         Transcription t = transcriber.transcribe(text);
         List<List<Segment>> words = new ArrayList<>(t.words());
         if (dropParticles && words.size() > 1) {
@@ -123,12 +151,12 @@ public class BrazilianPortuguesePhonetic implements StringEncoder {
         }
         List<List<String>> keys = new ArrayList<>(words.size());
         for (List<Segment> w : words) {
-            keys.add(tokens(Transcription.copyOf(w)));
+            keys.add(tokens(Transcription.copyOf(w), alternate));
         }
         return keys;
     }
 
-    private List<String> tokens(List<Segment> w) {
+    private List<String> tokens(List<Segment> w, boolean alternate) {
         int raised = Transcription.finalUnstressedMidVowel(w);
         if (raised >= 0) {
             w.get(raised).phoneme = w.get(raised).phoneme.isFrontMid() ? Phoneme.I : Phoneme.U;
@@ -143,7 +171,7 @@ public class BrazilianPortuguesePhonetic implements StringEncoder {
             }
         }
         if (monophthongize) {
-            monophthongize(w);
+            monophthongize(w, alternate);
         }
 
         List<String> tokens = new ArrayList<>(w.size() + 4);
@@ -167,7 +195,13 @@ public class BrazilianPortuguesePhonetic implements StringEncoder {
                 }
                 case L -> tokens.add(s.coda ? "U" : "L");
                 default -> {
-                    tokens.add(s.phoneme.key());
+                    if (alternate && s.letter == 'ç') {
+                        tokens.add("K"); // Gonçalves = Goncalves: the cedilla is often lost in records
+                    } else if (alternate && s.letter == 'w') {
+                        tokens.add("V"); // Wagner = Vagner
+                    } else {
+                        tokens.add(s.phoneme.key());
+                    }
                     if (s.isIllicitCoda()) {
                         tokens.add("I");
                     }
@@ -184,11 +218,11 @@ public class BrazilianPortuguesePhonetic implements StringEncoder {
     }
 
     /** ou → o (Moura, Lourdes, Souza); ei and ai before ɾ, ʃ, ʒ → e, a (Ribeiro, peixe, beijo, caixa). */
-    private static void monophthongize(List<Segment> w) {
+    private static void monophthongize(List<Segment> w, boolean alternate) {
         for (int k = w.size() - 2; k >= 0; k--) {
             Segment v = w.get(k);
             Segment g = w.get(k + 1);
-            if (v.phoneme.isBackMid() && g.phoneme == Phoneme.W_GLIDE) {
+            if (v.phoneme.isBackMid() && g.phoneme == Phoneme.W_GLIDE && !(alternate && g.letter == 'w')) {
                 w.remove(k + 1);
             } else if ((v.phoneme.isFrontMid() || v.phoneme == Phoneme.A) && g.phoneme == Phoneme.J_GLIDE
                     && k + 2 < w.size()) {
