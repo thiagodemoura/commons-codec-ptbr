@@ -27,7 +27,7 @@ import org.apache.commons.codec.StringEncoder;
  *       realizations of "r" forte (token H) and of /S/, /R/;</li>
  *   <li>an illicit coda consonant gets its epenthetic I (Edson = Edison, Ruth = Rute);</li>
  *   <li>optionally, ou and ei/ai before r, x, j are monophthongized (Moura = Mora, Ribeiro = Ribero) and
- *       unstressed e/o merge with i/u (Felipe = Filipe, the pretonic raising of Regra VIII).</li>
+ *       e/o merge with i/u (Felipe = Filipe, the pretonic raising of Regra VIII).</li>
  * </ul>
  *
  * <p>A nasal vowel is written as its vowel followed by N, after its glide if it has one ("canta" {@code KANTA},
@@ -38,10 +38,11 @@ import org.apache.commons.codec.StringEncoder;
  *
  * <p>Like {@code DoubleMetaphone}, a text has a primary key ({@link #encode(String)}) and an {@link #alternate
  * alternate} one, for the spellings of records: in the alternate, ç is K, like c before a, o, u (the cedilla is
- * often lost: Goncalves), and w is V (Wagner = Vagner). Two texts match ({@link #isEncodeEqual}) when they share a
+ * often lost: Goncalves), w is V (Wagner = Vagner), and a final unaccented -ez is read as the Spanish surname
+ * ending, like -es (Rodriguez = Rodrigues; the primary key reads it as stressed, like rapidez). Two texts match ({@link #isEncodeEqual}) when they share a
  * key, so "Gonçalves" ({@code GONSAUVIS} / {@code GONKAUVIS}) matches both "Gonsalves" and "Goncalves", and
  * "Wilson" ({@code UIUSON} / {@code VIUSON}) both "Uilson" and "Vilson", while "Gonsalves" and "Goncalves" do not
- * match each other. A text with no ç or w has one key: its alternate is its primary.
+ * match each other. A text with no ç, w or final -ez has one key: its alternate is its primary.
  *
  * <p>Instances are immutable and thread-safe.
  */
@@ -83,9 +84,9 @@ public class BrazilianPortuguesePhonetic implements StringEncoder {
     }
 
     /**
-     * The alternate key: as {@link #encode(String)}, with ç read as K and w as V.
+     * The alternate key: as {@link #encode(String)}, with ç read as K, w as V and a final -ez as -es.
      *
-     * @return the key, {@code null} for {@code null}; the primary key when the text has no ç or w
+     * @return the key, {@code null} for {@code null}; the primary key when the text has no ç, w or final -ez
      */
     public String alternate(String text) {
         return encode(text, true);
@@ -161,11 +162,21 @@ public class BrazilianPortuguesePhonetic implements StringEncoder {
         if (raised >= 0) {
             w.get(raised).phoneme = w.get(raised).phoneme.isFrontMid() ? Phoneme.I : Phoneme.U;
         }
+        if (alternate && w.size() >= 3) { // Rodriguez, Fernandez: the unstressed -es of Spanish surnames
+            Segment last = w.getLast();
+            Segment v = w.get(w.size() - 2);
+            if (last.phoneme == Phoneme.ARCH_S && last.underlying == Phoneme.Z && v.phoneme == Phoneme.E_ARCH
+                    && !v.accented && w.stream().filter(Segment::isVowel).count() >= 2) {
+                v.phoneme = Phoneme.I;
+            }
+        }
         if (foldUnstressedVowels) {
+            // stressed vowels too: without an accent the stress is a guess (Sergio, Keli, Sueli), so folding by
+            // stress would part the spellings it should join (Sérgio, Kelly, Suely)
             for (Segment s : w) {
-                if (!s.stressed && s.phoneme.isFrontMid()) {
+                if (s.phoneme.isFrontMid()) {
                     s.phoneme = Phoneme.I;
-                } else if (!s.stressed && s.phoneme.isBackMid()) {
+                } else if (s.phoneme.isBackMid()) {
                     s.phoneme = Phoneme.U;
                 }
             }
@@ -255,7 +266,11 @@ public class BrazilianPortuguesePhonetic implements StringEncoder {
             return this;
         }
 
-        /** Merges every unstressed e/o with i/u: Felipe = Filipe, Geovana = Giovana (off by default). */
+        /**
+         * Merges every e/o with i/u, stressed or not: Felipe = Filipe, Geovana = Giovana, and Sergio = Sérgio,
+         * Keli = Kelly, whose unaccented spellings put the stress elsewhere. Also merges names that differ only
+         * in e/i or o/u (Nelson = Nilson, Rosa = Rusa). Off by default.
+         */
         public Builder foldUnstressedVowels() {
             this.foldUnstressedVowels = true;
             return this;

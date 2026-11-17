@@ -84,6 +84,8 @@ class BrazilianPortuguesePhoneticTest {
             "Wilson,     UIUSON,     VIUSON",
             "Wagner,     UAGINER,    VAGINER",
             "Souza,      SOZA,       SOZA",
+            "Rodriguez,  HODRIGES,   HODRIGIS",
+            "rapidez,    HAPIDES,    HAPIDIS",  // the primary key keeps -ez stressed, as in Portuguese words
     })
     void alternateKeyReadsCedillaAsKAndWAsV(String text, String primary, String alternate) {
         assertEquals(primary, encoder.encode(text));
@@ -99,6 +101,11 @@ class BrazilianPortuguesePhoneticTest {
             "Wilson,    Vilson",
             "Wagner,    Vagner",
             "Vagner,    Wagner",
+            "Rodriguez, Rodrigues",
+            "Fernandez, Fernandes",
+            "Ignez,     Inês",
+            "Ignácio,   Inácio",
+            "Jacqueline, Jaqueline",
     })
     void sharedKeysMatch(String a, String b) {
         assertTrue(encoder.isEncodeEqual(a, b));
@@ -110,6 +117,8 @@ class BrazilianPortuguesePhoneticTest {
             "Uilson,    Vilson",
             "casa,      caça",
             "Carlos,    Sarlos",
+            "Magno,     Mano",      // gn is read with its g except in initial igna/igne
+            "ignorar,   inorar",
     })
     void unsharedKeysDoNotMatch(String a, String b) {
         assertFalse(encoder.isEncodeEqual(a, b));
@@ -122,6 +131,11 @@ class BrazilianPortuguesePhoneticTest {
         assertEquals("FILIPI", folding.encode("Felipe"));
         assertEquals("FILIPI", folding.encode("Filipe"));
         assertEquals(folding.encode("Geovana"), folding.encode("Giovana"));
+        // stress does not matter: the unaccented spellings put it elsewhere
+        for (String[] p : new String[][]{{"Sérgio", "Sergio"}, {"Kelly", "Keli"}, {"Sueli", "Suely"},
+                {"Edson", "Édson"}, {"Heloísa", "Heloiza"}, {"Vanderlei", "Wanderley"}, {"Moisés", "Moyses"}}) {
+            assertTrue(folding.isEncodeEqual(p[0], p[1]), p[0] + " = " + p[1]);
+        }
     }
 
     @Test

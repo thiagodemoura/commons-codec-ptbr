@@ -40,6 +40,8 @@ public final class BrazilianPortugueseTranscriber {
     private static final Pattern NON_LETTERS = Pattern.compile("[^\\p{L}]+");
     private static final Pattern PAROXYTONE_ENDING = Pattern.compile("(?:a|e|o|as|es|os|am|em|ens|y|ys)$");
     private static final Pattern SILENT_C_OR_P = Pattern.compile("(?<=[aeiouáéíóúâêô])[cp](?=t)");
+    /** The silent g of the old spelling of names: Ignez = Inês, Ignácio = Inácio (not ignorar, ignição). */
+    private static final Pattern SILENT_INITIAL_G = Pattern.compile("^ig(?=n[aáâeéê])");
 
     /** Word beginnings where x is /ks/ ("fixo", "táxi", "tóxico", "sexo", "anexo", "reflexo"). */
     private static final String[] X_AS_KS = {"fix", "tax", "táx", "tox", "tóx", "sex", "nex", "anex", "reflex",
@@ -57,8 +59,9 @@ public final class BrazilianPortugueseTranscriber {
 
     /**
      * @param simplifyEtymologicalSpelling drop the silent c and p of the pre-1943 etymological spellings still
-     *                                     common in names (ct → t, pt → t, mpç → nç, mpt → nt); this also drops the
-     *                                     c of words where it is pronounced ("pacto")
+     *                                     common in names (ct → t, pt → t, mpç → nç, mpt → nt, initial
+     *                                     igna/igne → ina/ine: "Ignez" = "Inez"); this also drops the c of
+     *                                     words where it is pronounced ("pacto")
      */
     public BrazilianPortugueseTranscriber(boolean simplifyEtymologicalSpelling) {
         this.simplifyEtymologicalSpelling = simplifyEtymologicalSpelling;
@@ -122,6 +125,7 @@ public final class BrazilianPortugueseTranscriber {
 
     private static String simplify(String w) {
         String s = w.replace("mpç", "nç").replace("mpt", "nt");
+        s = SILENT_INITIAL_G.matcher(s).replaceFirst("i");
         return SILENT_C_OR_P.matcher(s).replaceAll("");
     }
 
@@ -209,7 +213,7 @@ public final class BrazilianPortugueseTranscriber {
                     if (n1 == 'h') {
                         add(out, n2 == 'r' || n2 == 'l' ? Phoneme.K : Phoneme.SH); // Christiano, Chloé : chuva
                         i++;
-                    } else {
+                    } else if (n1 != 'q') { // cq is one k: Jacqueline, Jacques
                         add(out, isFrontLetter(n1) ? Phoneme.S : Phoneme.K);
                     }
                 }
